@@ -64,10 +64,12 @@ class DatasetLoader:
         for caption in self.__get_captions_list(train_data):
             vocab.update(caption.split())
 
-        self.vocabulary = set(map(lambda token: token[0], vocab.most_common(10002)))
+        vocabulary = set(map(lambda token: token[0], vocab.most_common(10002)))
+        vocabulary.add("<pad>")
+
+        self.vocabulary = vocabulary
         self.unknown = set(map(lambda token: token[0], vocab.items())) - self.vocabulary
 
     @staticmethod
     def __clean_caption(sentence):
         return sentence.lower().translate(str.maketrans("", "", string.punctuation))
-
