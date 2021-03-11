@@ -18,7 +18,6 @@ class CocoDataset(Dataset):
             # Required - https://pytorch.org/hub/pytorch_vision_inception_v3/
         ])
         self.vocabulary = None
-        self.__keys = None
 
     def __getitem__(self, item):
         return self.__transform_image(self.data[item]), self.__transform_captions(self.data[item])

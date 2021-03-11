@@ -1,4 +1,5 @@
 import string
+from collections import defaultdict
 
 from nltk import FreqDist
 
@@ -9,8 +10,8 @@ class Vocabulary:
         super(Vocabulary, self).__init__()
         self.known = None
         self.unknown = None
-        self.itos = {0: "<start>", 1: "<unk>", 2: "<end>", 3: "<pad>"}
-        self.stoi = {"<start>": 0, "<unk>": 1, "<end>": 2, "<pad>": 3}
+        self.itos = self.__prepare_itos()
+        self.stoi = self.__prepare_stoi()
         self.__prepare_vocabulary(train_data)
 
     def preprocess_caption(self, sentence, vocabulary: bool):
@@ -22,7 +23,7 @@ class Vocabulary:
         return caption
 
     def translate_caption(self, caption):
-        return [self.stoi["<unk>"] if word not in self.stoi else self.stoi[word] for word in caption.split()]
+        return [self.stoi[word] for word in caption.split()]
 
     def __prepare_vocabulary(self, train_data):
         vocab = FreqDist()
@@ -31,7 +32,6 @@ class Vocabulary:
             vocab.update(caption.split())
 
         vocabulary = set(map(lambda token: token[0], vocab.most_common(10002)))
-        vocabulary.add("<pad>")
 
         self.known = vocabulary
         self.unknown = set(map(lambda token: token[0], vocab.items())) - self.known
@@ -47,6 +47,25 @@ class Vocabulary:
         return map(
             lambda row: self.preprocess_caption(row["caption"], False),
             train_data["annotations"])
+
+    def __prepare_stoi(self):
+        stoi = defaultdict(lambda: 1)
+        stoi["<start>"] = 0
+        stoi["<unk>"] = 1
+        stoi["<end>"] = 2
+        stoi["<pad>"] = 3
+        return stoi
+
+    def __prepare_itos(self):
+        itos = defaultdict(lambda: "<unk>")
+        itos[0] = "<start>"
+        itos[1] = "<unk>"
+        itos[2] = "<end>"
+        itos[3] = "<pad>"
+        return itos
+
+    def __len__(self):
+        return len(self.itos)
 
     @staticmethod
     def __clean_caption(sentence):
