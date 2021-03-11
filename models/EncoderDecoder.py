@@ -6,10 +6,10 @@ from models.Encoder import Encoder
 
 
 class EncoderDecoder(nn.Module):
-    def __init__(self, embedding_size, hidden_size, vocab_size, num_layers):
+    def __init__(self, embedding_size, hidden_size, vocab_size, gru_layers):
         super(EncoderDecoder, self).__init__()
         self.encoder = Encoder(embedding_size)
-        self.decoder = Decoder(embedding_size, hidden_size, vocab_size, num_layers)
+        self.decoder = Decoder(embedding_size, hidden_size, vocab_size, gru_layers)
 
     def forward(self, images, captions):
         features = self.encoder(images)

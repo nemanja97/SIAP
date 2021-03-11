@@ -1,10 +1,9 @@
 import json
-import string
+from collections import defaultdict
 from os import path
 
-from nltk import FreqDist
-
 from utils.CocoDataset import CocoDataset
+from utils.Vocabulary import Vocabulary
 
 
 class DatasetLoader:
@@ -14,8 +13,10 @@ class DatasetLoader:
         self.__test_annotations_path = test_annotations_path
         self.__train_data_path = train_data_path
         self.__test_data_path = test_data_path
+        self.__train_data = defaultdict(lambda: {"image_path": None, "captions": []})
+        self.__test_data = defaultdict(lambda: {"image_path": None, "captions": []})
+
         self.vocabulary = None
-        self.unknown = None
         self.train_dataset = CocoDataset()
         self.test_dataset = CocoDataset()
 
@@ -27,49 +28,39 @@ class DatasetLoader:
 
         self.__get_image_paths(train_data, test_data)
         self.__get_captions(train_data, test_data)
+        train_data, test_data = self.__process_data_for_datasets()
+
+        self.train_dataset.data = train_data
+        self.test_dataset.data = test_data
+        self.train_dataset.vocabulary = self.vocabulary
+        self.test_dataset.vocabulary = self.vocabulary
 
     def __get_image_paths(self, train_data, test_data):
         for line in train_data["images"]:
-            self.train_dataset.set_image_path(line["id"], path.join(self.__train_data_path, line["file_name"]))
+            self.__train_data[line["id"]]["image_path"] = path.join(self.__train_data_path, line["file_name"])
 
         for line in test_data["images"]:
-            self.test_dataset.set_image_path(line["id"], path.join(self.__test_data_path, line["file_name"]))
+            self.__train_data[line["id"]]["image_path"] = path.join(self.__test_data_path, line["file_name"])
 
     def __get_captions(self, train_data, test_data):
-        if not self.vocabulary:
-            self.__prepare_vocabulary(train_data)
+        if self.vocabulary is None:
+            self.vocabulary = Vocabulary(train_data)
 
         for row in train_data["annotations"]:
-            self.train_dataset.append_caption(row["image_id"], self.__preprocess_caption(row["caption"], True))
+            self.__train_data[row["image_id"]]["captions"].append(self.vocabulary.preprocess_caption(row["caption"], True))
 
         for row in test_data["annotations"]:
-            self.test_dataset.append_caption(row["image_id"], self.__preprocess_caption(row["caption"], False))
+            self.__train_data[row["image_id"]]["captions"].append(self.vocabulary.preprocess_caption(row["caption"], False))
 
-    def __preprocess_caption(self, sentence, vocabulary: bool):
-        caption = self.__clean_caption(sentence)
-        if vocabulary:
-            caption = " ".join(["<unk>" if word in self.unknown else word for word in caption.split()])
+    def __process_data_for_datasets(self):
+        train_data = list()
+        for item in self.__train_data.values():
+            for caption in item["captions"]:
+                train_data.append({"image_path": item["image_path"], "caption": caption})
 
-        caption = f"<start> {caption} <end>"
-        return caption
+        test_data = list()
+        for item in self.__test_data.values():
+            for caption in item["captions"]:
+                train_data.append({"image_path": item["image_path"], "caption": caption})
 
-    def __get_captions_list(self, train_data):
-        return map(
-            lambda row: self.__preprocess_caption(row["caption"], False),
-            train_data["annotations"])
-
-    def __prepare_vocabulary(self, train_data):
-        vocab = FreqDist()
-
-        for caption in self.__get_captions_list(train_data):
-            vocab.update(caption.split())
-
-        vocabulary = set(map(lambda token: token[0], vocab.most_common(10002)))
-        vocabulary.add("<pad>")
-
-        self.vocabulary = vocabulary
-        self.unknown = set(map(lambda token: token[0], vocab.items())) - self.vocabulary
-
-    @staticmethod
-    def __clean_caption(sentence):
-        return sentence.lower().translate(str.maketrans("", "", string.punctuation))
+        return train_data, test_data
