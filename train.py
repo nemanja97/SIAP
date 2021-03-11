@@ -76,7 +76,7 @@ if __name__ == "__main__":
             captions = captions.to(DEVICE)
 
             # Train model
-            outputs = model(images, captions)
+            outputs = model(images, captions[:-1])
             loss = criterion(
                 outputs.reshape(-1, outputs.shape[2]), captions.reshape(-1)
             )
