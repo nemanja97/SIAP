@@ -27,10 +27,11 @@ class EncoderDecoder(nn.Module):
                 hiddens, states = self.decoder.gru(x, states)
                 output = self.decoder.linear(hiddens.squeeze(0))
                 predicted = output.argmax(1)
-                result_caption.append(predicted.item())
+                item = predicted.item()
+                result_caption.append(item)
                 x = self.decoder.embed(predicted).unsqueeze(0)
 
-                if vocabulary.itos[predicted.item()] == "<pad>":
+                if vocabulary.itos[item] == "<end>":
                     break
 
             return [vocabulary.itos[idx] for idx in result_caption]

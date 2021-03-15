@@ -40,17 +40,19 @@ class DatasetLoader:
             self.__train_data[line["id"]]["image_path"] = path.join(self.__train_data_path, line["file_name"])
 
         for line in test_data["images"]:
-            self.__train_data[line["id"]]["image_path"] = path.join(self.__test_data_path, line["file_name"])
+            self.__test_data[line["id"]]["image_path"] = path.join(self.__test_data_path, line["file_name"])
 
     def __get_captions(self, train_data, test_data):
         if self.vocabulary is None:
             self.vocabulary = Vocabulary(train_data)
 
         for row in train_data["annotations"]:
-            self.__train_data[row["image_id"]]["captions"].append(self.vocabulary.preprocess_caption(row["caption"], True))
+            self.__train_data[row["image_id"]]["captions"].append(
+                self.vocabulary.preprocess_caption(row["caption"], True))
 
         for row in test_data["annotations"]:
-            self.__train_data[row["image_id"]]["captions"].append(self.vocabulary.preprocess_caption(row["caption"], False))
+            self.__test_data[row["image_id"]]["captions"].append(
+                self.vocabulary.preprocess_caption(row["caption"], False))
 
     def __process_data_for_datasets(self):
         train_data = list()
@@ -61,6 +63,6 @@ class DatasetLoader:
         test_data = list()
         for item in self.__test_data.values():
             for caption in item["captions"]:
-                train_data.append({"image_path": item["image_path"], "caption": caption})
+                test_data.append({"image_path": item["image_path"], "caption": caption})
 
         return train_data, test_data

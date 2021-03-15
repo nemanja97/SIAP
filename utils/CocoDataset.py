@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
@@ -20,7 +18,8 @@ class CocoDataset(Dataset):
         self.vocabulary = None
 
     def __getitem__(self, item):
-        return self.__transform_image(self.data[item]), self.__transform_captions(self.data[item])
+        return self.__transform_image(self.data[item]), self.__transform_captions(self.data[item]), self.data[item][
+            "image_path"]
 
     def __len__(self):
         return len(self.data)

@@ -1,43 +1,16 @@
-import os
 import sys
 from datetime import datetime
 
 import torch.backends.cudnn
-from decouple import config
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adam
 from tqdm import tqdm
 
 from models.EncoderDecoder import EncoderDecoder
+from utils.CheckpointUtils import save_checkpoint
 from utils.CocoDataLoader import CocoDataLoader
+from utils.Constants import *
 from utils.DatasetLoader import DatasetLoader
-
-TRAINING_ANNOTATIONS_PATH = config("TRAINING_ANNOTATIONS_PATH")
-VALIDATION_ANNOTATIONS_PATH = config("VALIDATION_ANNOTATIONS_PATH")
-TRAINING_IMAGES_FOLDER = config("TRAINING_IMAGES_FOLDER")
-VALIDATION_IMAGES_FOLDER = config("VALIDATION_IMAGES_FOLDER")
-MODELS_SAVE_LOCATION = config("MODELS_SAVE_LOCATION")
-LOGS_SAVE_LOCATION = config("LOGS_SAVE_LOCATION")
-
-DEVICE = config("DEVICE")
-EPOCHS = int(config("EPOCHS"))
-BATCH_SIZE = int(config("BATCH_SIZE"))
-
-EMBEDDING_SIZE = int(config("EMBEDDING_SIZE"))
-HIDDEN_SIZE = int(config("HIDDEN_SIZE"))
-GRU_LAYERS = int(config("GRU_LAYERS"))
-LEARNING_RATE = float(config("LEARNING_RATE"))
-
-PADDING_INDEX = 3
-
-
-def save_checkpoint(checkpoint, file_name):
-    torch.save(checkpoint, os.path.join(MODELS_SAVE_LOCATION, file_name))
-
-
-def load_checkpoint(file_name):
-    return torch.load(os.path.join(MODELS_SAVE_LOCATION, file_name))
-
 
 if __name__ == "__main__":
     # Prepare data
