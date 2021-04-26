@@ -31,7 +31,7 @@ class Vocabulary:
         for caption in self.__get_captions_list(train_data):
             vocab.update(caption.split())
 
-        vocabulary = set(map(lambda token: token[0], vocab.most_common(10002)))
+        vocabulary = set(map(lambda token: token[0], vocab.most_common(4002)))
 
         self.known = vocabulary
         self.unknown = set(map(lambda token: token[0], vocab.items())) - self.known
