@@ -1,35 +1,31 @@
+from os.path import join
+
+import pandas as pd
 import torch
-from PIL import Image
 from torch.utils.data import Dataset
-from torchvision import transforms
+
+from utils.ImageTransormation import transform
+from utils.Vocabulary import Vocabulary
 
 
 class CocoDataset(Dataset):
 
-    def __init__(self):
+    def __init__(self, csv_data_file_location, images_location):
         super(CocoDataset, self).__init__()
-        self.data = []
-        self.transform = transforms.Compose([
-            transforms.Resize((299, 229)),  # Required - https://pytorch.org/hub/pytorch_vision_inception_v3/
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-            # Required - https://pytorch.org/hub/pytorch_vision_inception_v3/
-        ])
-        self.vocabulary = None
+        self.dataframe = pd.read_csv(csv_data_file_location)
+        self.vocabulary = Vocabulary(self.dataframe["caption"])
+        self.images_location = images_location
 
     def __getitem__(self, item):
-        return self.__transform_image(self.data[item]),\
-               self.__transform_captions(self.data[item]), \
-               self.data[item]["image_path"]
+        return self.__transform_image(self.dataframe["image"][item]), \
+               self.__transform_captions(self.dataframe["caption"][item])
 
     def __len__(self):
-        return len(self.data)
+        return len(self.dataframe)
 
     def __transform_image(self, item):
-        image = Image.open(item["image_path"]).convert("RGB")
-        image_tensor = self.transform(image)
-        return image_tensor
+        return transform(join(self.images_location, item))
 
     def __transform_captions(self, item):
-        numerical_translation = self.vocabulary.translate_caption(item["caption"])
+        numerical_translation = self.vocabulary.translate_caption(item)
         return torch.tensor(numerical_translation)

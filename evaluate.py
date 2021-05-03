@@ -1,45 +1,78 @@
-from tqdm import tqdm
+import string
+from collections import defaultdict
+from os.path import join
+
+import pandas as pd
+from torchtext.data.metrics import bleu_score
 
 from models.EncoderDecoder import EncoderDecoder
 from utils.CheckpointUtils import load_checkpoint
-from utils.CocoDataLoader import CocoDataLoader
-from utils.DatasetLoader import DatasetLoader
 from utils.Constants import *
-
-from torchtext.data.metrics import bleu_score
+from utils.ImageTransormation import transform
+from utils.Vocabulary import Vocabulary
 
 
 def try_model(file_name):
-    checkpoint = load_checkpoint(file_name, 'cuda')
+    # Load testing data
+    test_dataframe = pd.read_csv(VALIDATION_ANNOTATIONS_PATH)
 
-    dataset_loader = DatasetLoader(TRAINING_ANNOTATIONS_PATH, VALIDATION_ANNOTATIONS_PATH,
-                                   TRAINING_IMAGES_FOLDER, VALIDATION_IMAGES_FOLDER)
-
-    model = EncoderDecoder(embedding_size=EMBEDDING_SIZE,
-                           hidden_size=HIDDEN_SIZE,
-                           gru_layers=GRU_LAYERS,
-                           vocab_size=len(dataset_loader.train_dataset.vocabulary))
-
-    model.load_state_dict(checkpoint['state'])
+    # Load model and vocabulary
+    checkpoint = load_checkpoint(file_name, 'cpu')
+    vocabulary = load_vocabulary(checkpoint)
+    model = load_model(checkpoint, vocabulary)
     model.eval()
-
-    test_data_loader = CocoDataLoader(dataset=dataset_loader.test_dataset, shuffle=False, pin_memory=True,
-                                      padding_idx=PADDING_INDEX)
 
     predicted = []
     true = []
-    for i, (image, caption, image_path) in tqdm(enumerate(test_data_loader), total=len(test_data_loader), leave=False):
-        # add break for testing
-        pred = model.caption_image(image, dataset_loader.test_dataset.vocabulary)
-        print(pred)
-        predicted.append(pred)
-        print(image_path)
-        t = [dataset_loader.test_dataset.vocabulary.itos[idx[0]] for idx in caption.tolist()]
-        print(t)
-        true.append(t)
 
-    print("BLEU_SCORE: ", bleu_score(predicted, true))
+    for _, row in test_dataframe.iterrows():
+        image = transform(join(VALIDATION_IMAGES_FOLDER, row["image"])).unsqueeze(0)
+
+        true_caption = row["caption"]
+        predicted_caption = caption_image(image, model, vocabulary)
+        print("CORRECT: " + true_caption)
+        print("OUTPUT: " + predicted_caption)
+        print("-------------------------------------------------------------------------------------------------------")
+
+        true.append(
+            true_caption.translate(
+                str.maketrans("", "", string.punctuation)
+            ).split()
+        )
+        predicted.append(
+            predicted_caption.translate(
+                str.maketrans("", "", string.punctuation)
+            ).split()
+        )
+
+    print("BLEU_SCORE: ", bleu_score(predicted, true, max_n=1, weights=[1]))
+
+
+def caption_image(image, model, vocabulary):
+    captioned_image = model.caption_image(image, vocabulary)
+    captioned_image_without_tokens = captioned_image[1:-1]  # Strip <start> and <end>
+
+    sentence = " ".join(captioned_image_without_tokens)
+    return sentence.capitalize()
+
+
+def load_vocabulary(checkpoint):
+    vocabulary = Vocabulary(None)
+    vocabulary.stoi = defaultdict(lambda: 1, checkpoint["vocabulary.stoi"])
+    vocabulary.itos = defaultdict(lambda: "<unk>", checkpoint["vocabulary.itos"])
+    return vocabulary
+
+
+def load_model(checkpoint, vocabulary):
+    model = EncoderDecoder(
+        embedding_size=checkpoint["embedding_size"],
+        hidden_size=checkpoint["hidden_size"],
+        gru_layers=checkpoint["gru_layers"],
+        vocab_size=len(vocabulary)
+    )
+    model.load_state_dict(checkpoint["state"])
+    return model
 
 
 if __name__ == '__main__':
-    try_model("SIAP_MODEL.tar")
+    try_model("coco.big.tar")

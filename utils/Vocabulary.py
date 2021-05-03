@@ -1,54 +1,43 @@
-import string
 from collections import defaultdict
 
+import spacy
+
 from nltk import FreqDist
+from utils.Constants import NUMBER_OF_WORDS_FOR_VOCABULARY
+
+english_tokenizer = spacy.load("en_core_web_sm")
 
 
 class Vocabulary:
 
-    def __init__(self, train_data):
+    def __init__(self, train_captions):
         super(Vocabulary, self).__init__()
-        self.known = None
-        self.unknown = None
-        self.itos = self.__prepare_itos()
-        self.stoi = self.__prepare_stoi()
-        self.__prepare_vocabulary(train_data)
-
-    def preprocess_caption(self, sentence, vocabulary: bool):
-        caption = self.__clean_caption(sentence)
-        if vocabulary:
-            caption = " ".join(["<unk>" if word in self.unknown else word for word in caption.split()])
-
-        caption = f"<start> {caption} <end>"
-        return caption
+        if train_captions is not None:
+            self.stoi = self.__prepare_stoi()
+            self.itos = self.__prepare_itos()
+            self.__prepare_vocabulary(train_captions)
 
     def translate_caption(self, caption):
-        return [self.stoi[word] for word in caption.split()]
+        tokens = [token.text.lower() for token in english_tokenizer.tokenizer(caption)]
+        return [self.stoi["<start>"]] +\
+               [self.stoi[token] for token in tokens] +\
+               [self.stoi["<end>"]]
 
-    def __prepare_vocabulary(self, train_data):
+    def __prepare_vocabulary(self, train_captions):
         vocab = FreqDist()
-
-        for caption in self.__get_captions_list(train_data):
-            vocab.update(caption.split())
-
-        vocabulary = set(map(lambda token: token[0], vocab.most_common(4002)))
-
-        self.known = vocabulary
-        self.unknown = set(map(lambda token: token[0], vocab.items())) - self.known
+        for caption in train_captions:
+            vocab.update([token.text.lower() for token in english_tokenizer.tokenizer(caption)])
+        most_common_words = list(map(lambda token: token[0], vocab.most_common(NUMBER_OF_WORDS_FOR_VOCABULARY)))
 
         idx = 4
-        for word in self.known:
+        for word in most_common_words:
             if word not in self.stoi.keys():
                 self.stoi[word] = idx
                 self.itos[idx] = word
                 idx += 1
 
-    def __get_captions_list(self, train_data):
-        return map(
-            lambda row: self.preprocess_caption(row["caption"], False),
-            train_data["annotations"])
-
-    def __prepare_stoi(self):
+    @staticmethod
+    def __prepare_stoi():
         stoi = defaultdict(lambda: 1)
         stoi["<start>"] = 0
         stoi["<unk>"] = 1
@@ -56,7 +45,8 @@ class Vocabulary:
         stoi["<pad>"] = 3
         return stoi
 
-    def __prepare_itos(self):
+    @staticmethod
+    def __prepare_itos():
         itos = defaultdict(lambda: "<unk>")
         itos[0] = "<start>"
         itos[1] = "<unk>"
@@ -66,7 +56,3 @@ class Vocabulary:
 
     def __len__(self):
         return len(self.itos)
-
-    @staticmethod
-    def __clean_caption(sentence):
-        return sentence.lower().translate(str.maketrans("", "", string.punctuation))

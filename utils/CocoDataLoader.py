@@ -23,7 +23,4 @@ class CocoDataCollate:
 
         captions = [item[1] for item in batch]
         captions = pad_sequence(captions, batch_first=False, padding_value=self.__padding_idx)
-
-        image_paths = [item[2] for item in batch]
-
-        return images, captions, image_paths
+        return images, captions
