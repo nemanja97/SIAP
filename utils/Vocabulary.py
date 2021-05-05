@@ -27,6 +27,8 @@ class Vocabulary:
         vocab = FreqDist()
         for caption in train_captions:
             vocab.update([token.text.lower() for token in english_tokenizer.tokenizer(caption)])
+        # Histogram
+        # hist, bin_edges = np.histogram(list(vocab.values()), bins=20000, density=False)
         most_common_words = list(map(lambda token: token[0], vocab.most_common(NUMBER_OF_WORDS_FOR_VOCABULARY)))
 
         idx = 4

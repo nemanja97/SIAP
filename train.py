@@ -39,20 +39,26 @@ if __name__ == "__main__":
     step = 0
     if LOAD_MODEL:
         checkpoint = load_checkpoint("coco.big.tar", DEVICE)
+
+        # Load vocabulary
         train_dataset.vocabulary.itos = defaultdict(lambda: "<unk>", checkpoint["vocabulary.itos"])
         train_dataset.vocabulary.stoi = defaultdict(lambda: 1, checkpoint["vocabulary.stoi"])
 
+        # Load model parameters
         EMBEDDING_SIZE = checkpoint["embedding_size"]
         HIDDEN_SIZE = checkpoint["hidden_size"]
         GRU_LAYERS = checkpoint["gru_layers"]
+
+        # Load model
         model = EncoderDecoder(
             embedding_size=EMBEDDING_SIZE,
             hidden_size=HIDDEN_SIZE,
             gru_layers=GRU_LAYERS,
             vocab_size=len(train_dataset.vocabulary)
         )
-
         model.load_state_dict(checkpoint["state"])
+
+        # Load data from previous training sessions
         optimizer.load_state_dict(checkpoint["optimizer"])
         step = checkpoint["step"]
 
