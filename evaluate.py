@@ -25,19 +25,23 @@ def try_model(file_name):
     predicted = []
     true = []
 
-    for _, row in test_dataframe.iterrows():
-        image = transform(join(VALIDATION_IMAGES_FOLDER, row["image"])).unsqueeze(0)
-
-        true_caption = row["caption"]
+    for image_name in test_dataframe.image.unique():
+        image = transform(join(VALIDATION_IMAGES_FOLDER, image_name)).unsqueeze(0)
         predicted_caption = caption_image(image, model, vocabulary)
-        print("CORRECT: " + true_caption)
+
         print("OUTPUT: " + predicted_caption)
+
+        true_captions_for_image = []
+        for _, row in test_dataframe.loc[test_dataframe['image'] == image_name].iterrows():
+            caption = row["caption"]
+            print("CORRECT: " + caption)
+            true_captions_for_image.append(caption.translate(
+                str.maketrans("", "", string.punctuation)
+            ).split())
         print("-------------------------------------------------------------------------------------------------------")
 
         true.append(
-            true_caption.translate(
-                str.maketrans("", "", string.punctuation)
-            ).split()
+            true_captions_for_image
         )
         predicted.append(
             predicted_caption.translate(
@@ -45,7 +49,7 @@ def try_model(file_name):
             ).split()
         )
 
-    print("BLEU_SCORE: ", bleu_score(predicted, true, max_n=1, weights=[1]))
+    print("BLEU_SCORE: ", bleu_score(predicted, true))
 
 
 def caption_image(image, model, vocabulary):
